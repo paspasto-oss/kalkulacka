@@ -9,7 +9,7 @@
     <!-- React + ReactDOM (UMD) -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    <!-- Babel (rýchle nasadenie bez build-u) -->
+    <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
       html, body { margin:0; padding:0; background:#2e3239; }
@@ -25,22 +25,21 @@
       const fmtEur  = (n) => n.toLocaleString('sk-SK', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
       const fmtEur3 = (n) => n.toLocaleString('sk-SK', { style: 'currency', currency: 'EUR', maximumFractionDigits: 3 });
 
-      // Predvolené hodnoty
       const DEFAULTS = {
-        heatDemand: 20000,        // kWh/rok tepla
-        electricityPrice: 0.16,   // €/kWh
-        gasPricePerKWh: 0.09,     // €/kWh paliva
-        pelletsPricePerTon: 320,  // €/t
-        woodPricePerPrm: 100,     // €/prm
-        hpSCOP: 3.8,              // sezónny COP
-        effElectric: 1.0,         // el. kotol
-        effGas: 0.92,             // plyn
-        effPellets: 0.88,         // pelety
-        effWood: 0.80,            // drevo
-        pelletsKWhPerTon: 4800,   // kWh/t
-        woodKWhPerPrm: 1900,      // kWh/prm
-        fveSharePct: 0,           // % spotreby TČ z FVE
-        fvePrice: 0.00,           // €/kWh vlastnej FVE
+        heatDemand: 20000,
+        electricityPrice: 0.16,
+        gasPricePerKWh: 0.09,
+        pelletsPricePerTon: 320,
+        woodPricePerPrm: 100,
+        hpSCOP: 3.8,
+        effElectric: 1.0,
+        effGas: 0.92,
+        effPellets: 0.88,
+        effWood: 0.80,
+        pelletsKWhPerTon: 4800,
+        woodKWhPerPrm: 1900,
+        fveSharePct: 0,
+        fvePrice: 0.00,
       };
 
       const STORAGE_KEY = 'heating_calc_inputs_v1';
@@ -69,8 +68,17 @@
         </label>
       );
 
+      // Tooltip komponent
+      const Tooltip = ({ text }) => (
+        <span className="group relative ml-1">
+          <span className="w-4 h-4 inline-flex items-center justify-center rounded-full bg-blue-500 text-black text-xs font-bold cursor-pointer">?</span>
+          <span className="absolute hidden group-hover:block w-64 text-xs text-white bg-black/90 p-2 rounded-md -left-1/2 top-5 z-10">
+            {text}
+          </span>
+        </span>
+      );
+
       function HeatingCalculator(){
-        // Load z URL alebo localStorage
         const [inputs, setInputs] = useState(()=>{
           try{
             const qs = new URLSearchParams(location.search);
@@ -95,17 +103,15 @@
 
         useEffect(()=>{ localStorage.setItem(STORAGE_KEY, JSON.stringify(inputs)); }, [inputs]);
 
-        // Efektívna cena el. pre TČ s FVE blendingom
         const hpElecPrice = useMemo(()=>{
           const share = Math.min(Math.max(inputs.fveSharePct/100,0),1);
           return inputs.electricityPrice*(1-share) + inputs.fvePrice*share;
         }, [inputs.electricityPrice, inputs.fveSharePct, inputs.fvePrice]);
 
-        // Výsledky
         const results = useMemo(()=>{
           const heat = inputs.heatDemand;
           const priceHPkWh     = hpElecPrice / inputs.hpSCOP;
-          const priceEleckWh   = inputs.electricityPrice / inputs.effElectric; // = electricityPrice
+          const priceEleckWh   = inputs.electricityPrice / inputs.effElectric;
           const priceGaskWh    = inputs.gasPricePerKWh / inputs.effGas;
           const pricePelletkWh = inputs.pelletsPricePerTon / (inputs.pelletsKWhPerTon * inputs.effPellets);
           const priceWoodkWh   = inputs.woodPricePerPrm / (inputs.woodKWhPerPrm * inputs.effWood);
@@ -130,7 +136,8 @@
         return (
           <div className="text-white">
             <div className="max-w-6xl mx-auto px-4 py-6">
-              {/* HLAVIČKA – tmavá, väčšie písmo */}
+
+              {/* HLAVIČKA */}
               <div className="rounded-2xl overflow-hidden border border-black/30 shadow-sm">
                 <div className="bg-[#111] px-5 py-4">
                   <div className="text-2xl md:text-3xl font-extrabold tracking-tight">{company.name}</div>
@@ -149,7 +156,7 @@
                 <button onClick={doReset} className="px-3 py-2 rounded-lg bg-slate-500 hover:bg-slate-600 text-white">Reset</button>
               </div>
 
-              {/* VSTUPY – tmavé karty */}
+              {/* VSTUPY */}
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
                 <Card title="Ročná potreba tepla" subtitle="kWh/rok (kúrenie+TÚV)">
                   <NumberRow label="Teplo (kWh/rok)" value={inputs.heatDemand} step={500} onChange={(v)=>set({heatDemand:v})} />
@@ -166,7 +173,10 @@
                   <div className="mt-2 border-t border-white/10 pt-2">
                     <NumberRow label="Pokrytie TČ z FVE (%)" value={inputs.fveSharePct} step={5} decimals={0} onChange={(v)=>set({fveSharePct:v})} />
                     <NumberRow label="Cena vlastnej FVE (€/kWh)" value={inputs.fvePrice} step={0.01} decimals={3} onChange={(v)=>set({fvePrice:v})} hint="ak 0, tak zdarma" />
-                    <div className="text-[12px] text-slate-300">Efektívna cena el. pre TČ: {fmtEur3(hpElecPrice)} /kWh</div>
+                    <div className="text-[12px] text-slate-300 flex items-center gap-1">
+                      Efektívna cena el. pre TČ: {fmtEur3(hpElecPrice)} /kWh
+                      <Tooltip text="Priemerná cena elektriny zohľadňujúca SCOP a podiel z FVE. Napr. COP 3 → ~0,072 €/kWh tepla, COP 4 → ~0,054 €/kWh tepla." />
+                    </div>
                   </div>
                 </Card>
 
@@ -182,8 +192,15 @@
                 </Card>
 
                 <Card title="Kotol na drevo">
+                  <NumberRow 
+                    label={<span>Výhrevnosť (kWh/prm) 
+                      <Tooltip text="Tvrdé drevo (buk, dub): ~1900 kWh/prm. Mäkké drevo (breza, jelša): ~1700 kWh/prm. Ihličnany (smrek, borovica): ~1500–1600 kWh/prm." />
+                    </span>} 
+                    value={inputs.woodKWhPerPrm} 
+                    step={50} 
+                    onChange={(v)=>set({woodKWhPerPrm:v})} 
+                  />
                   <NumberRow label="Cena dreva (€/prm)" value={inputs.woodPricePerPrm} step={5} onChange={(v)=>set({woodPricePerPrm:v})} />
-                  <NumberRow label="Výhrevnosť (kWh/prm)" value={inputs.woodKWhPerPrm} step={50} onChange={(v)=>set({woodKWhPerPrm:v})} />
                   <NumberRow label="Účinnosť kotla" value={inputs.effWood} step={0.01} decimals={2} onChange={(v)=>set({effWood:v})} />
                 </Card>
               </div>
@@ -192,7 +209,7 @@
               <section className="mt-4">
                 <h2 className="text-lg font-semibold text-white mb-2">Výsledky – cena tepla a ročné náklady</h2>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {results.map((r)=>(
+                  {results.map((r)=>( 
                     <div key={r.key} className={`rounded-xl border border-black/20 bg-[#444] text-white p-4 shadow-sm ${r.key===cheapestKey ? 'ring-2 ring-green-500' : ''}`}>
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="font-bold text-base">{r.label}</h3>
@@ -217,31 +234,6 @@
       }
 
       ReactDOM.createRoot(document.getElementById('app-root')).render(<HeatingCalculator />);
-    </script>
-
-    <!-- Auto-resize pre iframe (posiela výšku rodičovi a reaguje na požiadavku) -->
-    <script>
-      (function () {
-        function postHeight() {
-          const h = document.documentElement.scrollHeight || document.body.scrollHeight || 0;
-          parent.postMessage({ type: 'spektra:resize', height: h }, '*');
-        }
-        window.addEventListener('load', postHeight);
-        window.addEventListener('resize', postHeight);
-
-        // Sleduj zmeny DOM (pri prepisoch vstupov)
-        const mo = new MutationObserver(() => {
-          clearTimeout(window.__spektraTO);
-          window.__spektraTO = setTimeout(postHeight, 50);
-        });
-        mo.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
-
-        // Odpoveď na žiadosť rodiča
-        window.addEventListener('message', (e) => {
-          if (!e.data || e.data.type !== 'spektra:requestHeight') return;
-          postHeight();
-        });
-      })();
     </script>
   </body>
 </html>
