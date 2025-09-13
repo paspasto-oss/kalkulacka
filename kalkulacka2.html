@@ -172,7 +172,22 @@
                   <div className="mt-1 text-[12px] text-slate-300">Tip: podlahovka 35–40 °C ≈ 3.8–4.5, radiátory 50–55 °C ≈ 2.8–3.5</div>
                   <div className="mt-2 border-t border-white/10 pt-2">
                     <NumberRow label="Pokrytie TČ z FVE (%)" value={inputs.fveSharePct} step={5} decimals={0} onChange={(v)=>set({fveSharePct:v})} />
-                    <NumberRow label="Cena vlastnej FVE (€/kWh)" value={inputs.fvePrice} step={0.01} decimals={3} onChange={(v)=>set({fvePrice:v})} hint="ak 0, tak zdarma" />
+                    <NumberRow 
+  label={<span>Cena vlastnej FVE (€/kWh)
+    <Tooltip text="Sem zadajte cenu elektriny z vlastnej fotovoltiky. 
+Ak ju beriete ako bezplatnú, ponechajte hodnotu 0. 
+Ak máte reálne náklady (splátky, servis), prepočítajte ich na €/kWh.
+
+Napr.: pri 10 kW FVE s investíciou cca 7000 € a ročnou výrobou ~10 000 kWh 
+→ počas 20 rokov prevádzky vychádza cena približne 0,035 €/kWh." />
+  </span>} 
+  value={inputs.fvePrice} 
+  step={0.01} 
+  decimals={3} 
+  onChange={(v)=>set({fvePrice:v})} 
+  hint="ak 0, tak zdarma" 
+/>
+
                     <div className="text-[12px] text-slate-300 flex items-center gap-1">
                       Efektívna cena el. pre TČ: {fmtEur3(hpElecPrice)} /kWh
                       <Tooltip text="Priemerná cena elektriny zohľadňujúca SCOP a podiel z FVE. Napr. COP 3 → ~0,072 €/kWh tepla, COP 4 → ~0,054 €/kWh tepla." />
@@ -237,3 +252,4 @@
     </script>
   </body>
 </html>
+
