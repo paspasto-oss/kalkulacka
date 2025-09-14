@@ -171,7 +171,27 @@
                   <NumberRow label="SCOP (sezónny)" value={inputs.hpSCOP} step={0.1} decimals={1} onChange={(v)=>set({hpSCOP:v})} />
                   <div className="mt-1 text-[12px] text-slate-300">Tip: podlahovka 35–40 °C ≈ 3.8–4.5, radiátory 50–55 °C ≈ 2.8–3.5</div>
                   <div className="mt-2 border-t border-white/10 pt-2">
-                    <NumberRow label="Pokrytie TČ z FVE (%)" value={inputs.fveSharePct} step={5} decimals={0} onChange={(v)=>set({fveSharePct:v})} />
+                    <NumberRow
+  label={
+    <span>Podiel TČ z FVE (%)
+      <Tooltip text={`Akú časť ročnej spotreby tepelného čerpadla pokryje tvoja fotovoltika.
+Zvyšok ide zo siete za bežnú cenu elektriny.
+
+Výpočet efektívnej ceny el. pre TČ:
+c_eff = cena_sieť*(1 − podiel) + cena_FVE*podiel
+
+Príklad: podiel 30 %, cena_sieť 0,20 €/kWh, cena_FVE 0,00 €/kWh
+→ c_eff = 0,20*(1−0,30) + 0*0,30 = 0,14 €/kWh.
+
+Pozn.: podiel je ročný odhad (v lete vyšší, v zime nižší). S batériou alebo smart riadením môže byť podiel vyšší, bez batérie skôr 20–40 %.`} />
+    </span>
+  }
+  value={inputs.fveSharePct}
+  step={5}
+  decimals={0}
+  onChange={(v)=>set({ fveSharePct: v })}
+ />
+
                     <NumberRow 
                       label={<span>Cena vlastnej FVE (€/kWh)
                         <Tooltip text="Sem zadajte cenu elektriny z vlastnej fotovoltiky. 
@@ -250,3 +270,4 @@ Napr.: pri 10 kW FVE s investíciou cca 7000 € a ročnou výrobou ~10 000 kWh
     </script>
   </body>
 </html>
+
