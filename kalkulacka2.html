@@ -1,273 +1,152 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="sk">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Porovnávacia kalkulačka vykurovania – Spektra Install</title>
-    <!-- Tailwind -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React + ReactDOM (UMD) -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    <!-- Babel -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <style>
-      html, body { margin:0; padding:0; background:#2e3239; }
-      @media print { body { background:#fff !important; } .print\:hidden{display:none!important;} }
-    </style>
-  </head>
-  <body>
-    <div id="app-root"></div>
-
-    <script type="text/babel">
-      const { useState, useMemo, useEffect } = React;
-
-      const fmtEur  = (n) => n.toLocaleString('sk-SK', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
-      const fmtEur3 = (n) => n.toLocaleString('sk-SK', { style: 'currency', currency: 'EUR', maximumFractionDigits: 3 });
-
-      const DEFAULTS = {
-        heatDemand: 20000,
-        electricityPrice: 0.16,
-        gasPricePerKWh: 0.09,
-        pelletsPricePerTon: 320,
-        woodPricePerPrm: 100,
-        hpSCOP: 3.8,
-        effElectric: 1.0,
-        effGas: 0.92,
-        effPellets: 0.88,
-        effWood: 0.80,
-        pelletsKWhPerTon: 4800,
-        woodKWhPerPrm: 1900,
-        fveSharePct: 0,
-        fvePrice: 0.00,
-      };
-
-      const STORAGE_KEY = 'heating_calc_inputs_v1';
-
-      const Card = ({ title, subtitle, children }) => (
-        <div className="rounded-xl border border-black/20 bg-[#444] text-white p-4 shadow-sm">
-          <div className="mb-2">
-            <div className="font-semibold">{title}</div>
-            {subtitle && <div className="text-xs text-slate-300">{subtitle}</div>}
-          </div>
-          {children}
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kalkulačka – cena tepla a ročné náklady</title>
+<style>
+  :root{--brand:#d60000;--bg:#0f172a;--card:#111827;--ink:#e5e7eb;--muted:#94a3b8}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,Segoe UI,Roboto,Inter,Arial,sans-serif}
+  .wrap{max-width:960px;margin:32px auto;padding:0 16px}
+  h1{font-size:1.6rem;margin:0 0 8px}
+  .card{background:var(--card);border:1px solid #1f2937;border-radius:16px;padding:16px 16px 4px 16px;margin:14px 0}
+  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+  .col-6{grid-column:span 6}
+  .col-4{grid-column:span 4}
+  .col-12{grid-column:span 12}
+  label{display:block;font-size:.92rem;color:var(--muted);margin:6px 0}
+  input{width:100%;padding:10px;border-radius:10px;border:1px solid #374151;background:#0b1220;color:#e5e7eb}
+  .btn{background:var(--brand);color:#fff;border:none;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer}
+  .row{display:flex;gap:10px;align-items:center;margin:12px 0}
+  .result{font-size:1.05rem;background:#0b1220;border:1px dashed #334155;border-radius:12px;padding:12px}
+  small{color:var(--muted)}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Energetická kalkulačka – cena tepla a ročné náklady</h1>
+    <div class="card">
+      <div class="grid">
+        <div class="col-4">
+          <label>Ročná potreba tepla (kWh)</label>
+          <input type="number" id="Q" placeholder="13000" step="1">
+          <small>Ak nevieš, pre 200 m² stredne zateplený dom ~13 000 kWh</small>
         </div>
-      );
 
-      const NumberRow = ({ label, value, onChange, step=1, decimals=0, hint }) => (
-        <label className="flex flex-col gap-1 mb-2">
-          <span className="text-sm text-slate-200">{label}</span>
-          <input
-            type="number"
-            step={step}
-            value={value}
-            onChange={(e)=>onChange(Number(e.target.value))}
-            className="px-3 py-2 rounded-xl border border-white/10 bg-[#555] text-white outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          {hint && <span className="text-[11px] text-slate-400">{hint}</span>}
-        </label>
-      );
+        <div class="col-4">
+          <label>Cena elektriny (€/kWh)</label>
+          <input type="number" id="elCena" placeholder="0.20" step="0.001">
+        </div>
+        <div class="col-4">
+          <label>SCOP/COP tepelného čerpadla (–)</label>
+          <input type="number" id="cop" placeholder="3.2" step="0.1">
+        </div>
 
-      // Tooltip komponent
-      const Tooltip = ({ text }) => (
-        <span className="group relative ml-1">
-          <span className="w-4 h-4 inline-flex items-center justify-center rounded-full bg-blue-500 text-black text-xs font-bold cursor-pointer">?</span>
-          <span className="absolute hidden group-hover:block w-64 text-xs text-white bg-black/90 p-2 rounded-md -left-1/2 top-5 z-10">
-            {text}
-          </span>
-        </span>
-      );
+        <div class="col-4">
+          <label>Cena plynu (€/kWh)</label>
+          <input type="number" id="plynCena" placeholder="0.096" step="0.001">
+        </div>
+        <div class="col-4">
+          <label>Účinnosť plynového kotla (%)</label>
+          <input type="number" id="plynEta" placeholder="95" step="1" min="1" max="100">
+        </div>
 
-      function HeatingCalculator(){
-        const [inputs, setInputs] = useState(()=>{
-          try{
-            const qs = new URLSearchParams(location.search);
-            if(qs.size){
-              const base = {...DEFAULTS};
-              for(const [k,v] of qs.entries()) if(k in base) base[k]=Number(v);
-              return base;
-            }
-            const raw = localStorage.getItem(STORAGE_KEY);
-            return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : DEFAULTS;
-          }catch{ return DEFAULTS; }
-        });
+        <div class="col-4">
+          <label>Cena peliet (€/t)</label>
+          <input type="number" id="pelCena" placeholder="300" step="1">
+        </div>
+        <div class="col-4">
+          <label>Výhrevnosť peliet (kWh/t)</label>
+          <input type="number" id="pelVH" placeholder="4800" step="1">
+        </div>
+        <div class="col-4">
+          <label>Účinnosť peletového kotla (%)</label>
+          <input type="number" id="pelEta" placeholder="88" step="1" min="1" max="100">
+        </div>
 
-        const [company] = useState({
-          name: 'Spektra Install',
-          sidlo: 'Rajecká Lesná 98, 013 15',
-          prevadzka: 'Hollého 210, Rajec 01501',
-          web: 'www.spektrainstall.sk',
-          phone: '+421 917 572 221',
-          email: 'spektrainstall@gmail.com',
-        });
+        <div class="col-4">
+          <label>Cena dreva (€/prm)</label>
+          <input type="number" id="drvCena" placeholder="80" step="1">
+        </div>
+        <div class="col-4">
+          <label>Výhrevnosť dreva (kWh/prm)</label>
+          <input type="number" id="drvVH" placeholder="1900" step="1">
+        </div>
+        <div class="col-4">
+          <label>Účinnosť kotla na drevo (%)</label>
+          <input type="number" id="drvEta" placeholder="80" step="1" min="1" max="100">
+        </div>
 
-        useEffect(()=>{ localStorage.setItem(STORAGE_KEY, JSON.stringify(inputs)); }, [inputs]);
+        <div class="col-12 row">
+          <button class="btn" id="calcBtn">Vypočítať</button>
+          <small>Všetky polia majú **placeholder**, žiadna „fixná nula“. Pri kliknutí sa 0 automaticky vymaže a po opustení prázdneho poľa sa vráti.</small>
+        </div>
 
-        const hpElecPrice = useMemo(()=>{
-          const share = Math.min(Math.max(inputs.fveSharePct/100,0),1);
-          return inputs.electricityPrice*(1-share) + inputs.fvePrice*share;
-        }, [inputs.electricityPrice, inputs.fveSharePct, inputs.fvePrice]);
+        <div class="col-12 result" id="out">Zadajte hodnoty a kliknite Vypočítať.</div>
+      </div>
+    </div>
+  </div>
 
-        const results = useMemo(()=>{
-          const heat = inputs.heatDemand;
-          const priceHPkWh     = hpElecPrice / inputs.hpSCOP;
-          const priceEleckWh   = inputs.electricityPrice / inputs.effElectric;
-          const priceGaskWh    = inputs.gasPricePerKWh / inputs.effGas;
-          const pricePelletkWh = inputs.pelletsPricePerTon / (inputs.pelletsKWhPerTon * inputs.effPellets);
-          const priceWoodkWh   = inputs.woodPricePerPrm / (inputs.woodKWhPerPrm * inputs.effWood);
+<script>
+/* --- Globálne: oprava „fixnej nuly“ pre VŠETKY number inputy --- */
+document.querySelectorAll('input[type=number]').forEach(function (input) {
+  // ak by si chcel predvyplniť 0, môžeš ponechať value="0" a to sa tu vymaže pri fókus
+  input.addEventListener('focus', function () {
+    if (this.value === '0') this.value = '';
+  });
+  input.addEventListener('blur', function () {
+    if (this.value === '') this.value = ''; // nepridávame späť 0, nech ostane prázdne
+  });
+});
 
-          const rows = [
-            { key:'hp',      label:'Tepelné čerpadlo',   cpk:priceHPkWh,     annual:priceHPkWh*heat,     note:`SCOP ${inputs.hpSCOP}` },
-            { key:'elec',    label:'Elektrický kotol',   cpk:priceEleckWh,   annual:priceEleckWh*heat,   note:`účinnosť ${(inputs.effElectric*100).toFixed(0)}%` },
-            { key:'gas',     label:'Plynový kotol',      cpk:priceGaskWh,    annual:priceGaskWh*heat,    note:`účinnosť ${(inputs.effGas*100).toFixed(0)}%` },
-            { key:'pellets', label:'Kotol na pelety',    cpk:pricePelletkWh, annual:pricePelletkWh*heat, note:`účinnosť ${(inputs.effPellets*100).toFixed(0)}%` },
-            { key:'wood',    label:'Kotol na drevo',     cpk:priceWoodkWh,   annual:priceWoodkWh*heat,   note:`účinnosť ${(inputs.effWood*100).toFixed(0)}%` },
-          ];
-          rows.sort((a,b)=>a.annual-b.annual);
-          return rows;
-        }, [inputs, hpElecPrice]);
+/* --- Pomocné funkcie --- */
+const num = (id, fallback=0) => {
+  const v = parseFloat(document.getElementById(id).value || document.getElementById(id).placeholder);
+  return isFinite(v) ? v : fallback;
+};
+const fmt = (x, d=2) => Number(x).toFixed(d);
 
-        const cheapestKey = results[0]?.key;
+/* --- Výpočet --- */
+document.getElementById('calcBtn').addEventListener('click', function(){
+  const Q = num('Q', 13000);             // ročná potreba tepla [kWh]
+  const elCena = num('elCena', 0.20);    // €/kWh
+  const cop = num('cop', 3.2);           // –
+  const plynCena = num('plynCena', 0.096); // €/kWh
+  const plynEta = num('plynEta', 95)/100;  // %
+  const pelCena = num('pelCena', 300);     // €/t
+  const pelVH = num('pelVH', 4800);        // kWh/t
+  const pelEta = num('pelEta', 88)/100;    // %
+  const drvCena = num('drvCena', 80);      // €/prm
+  const drvVH = num('drvVH', 1900);        // kWh/prm
+  const drvEta = num('drvEta', 80)/100;    // %
 
-        const set = (patch)=>setInputs(s=>({ ...s, ...patch }));
-        const doReset = ()=>setInputs(DEFAULTS);
-        const doPrint = ()=>window.print();
+  // TC: elektrická energia = Q / COP
+  const tcEl = Q / cop;                         // kWh el./rok
+  const tcCost = tcEl * elCena;                 // € / rok
+  const tcKwh = elCena / cop;                   // €/kWh tepla
 
-        return (
-          <div className="text-white">
-            <div className="max-w-6xl mx-auto px-4 py-6">
+  // Plyn: cena/kWh tepla = plynCena / účinnosť
+  const plynKwh = plynCena / plynEta;
+  const plynCost = Q * plynKwh;
 
-              {/* HLAVIČKA */}
-              <div className="rounded-2xl overflow-hidden border border-black/30 shadow-sm">
-                <div className="bg-[#111] px-5 py-4">
-                  <div className="text-2xl md:text-3xl font-extrabold tracking-tight">{company.name}</div>
-                  <div className="text-sm md:text-base text-slate-300">Sídlo: {company.sidlo} • Prevádzka: {company.prevadzka}</div>
-                  <div className="text-sm md:text-base text-slate-300">{company.web} • {company.phone} • {company.email}</div>
-                </div>
-                <div className="bg-[#333] px-5 py-4">
-                  <h1 className="text-xl md:text-2xl font-bold tracking-tight">Porovnávacia kalkulačka vykurovania</h1>
-                  <p className="text-sm md:text-base text-slate-200/90">Elektrický kotol • Drevo • Tepelné čerpadlo • Plyn • Pelety</p>
-                </div>
-              </div>
+  // Pelety:
+  const pelKwhPrice = (pelCena / pelVH) / pelEta; // €/kWh tepla
+  const pelCost = Q * pelKwhPrice;
 
-              {/* OVLÁDANIE */}
-              <div className="mt-3 flex gap-2 print:hidden">
-                <button onClick={doPrint} className="px-3 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm">Stiahnuť PDF</button>
-                <button onClick={doReset} className="px-3 py-2 rounded-lg bg-slate-500 hover:bg-slate-600 text-white">Reset</button>
-              </div>
+  // Drevo:
+  const drvKwhPrice = (drvCena / drvVH) / drvEta;
+  const drvCost = Q * drvKwhPrice;
 
-              {/* VSTUPY */}
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
-                <Card title="Ročná potreba tepla" subtitle="kWh/rok (kúrenie+TÚV)">
-                  <NumberRow label="Teplo (kWh/rok)" value={inputs.heatDemand} step={500} onChange={(v)=>set({heatDemand:v})} />
-                </Card>
-
-                <Card title="Elektrina">
-                  <NumberRow label="Cena elektriny (€/kWh)" value={inputs.electricityPrice} step={0.01} decimals={3} onChange={(v)=>set({electricityPrice:v})} />
-                  <NumberRow label="Účinnosť el. kotla" value={inputs.effElectric} step={0.01} decimals={2} onChange={(v)=>set({effElectric:v})} hint="typicky 1.00" />
-                </Card>
-
-                <Card title="Tepelné čerpadlo" subtitle="SCOP a vplyv FVE">
-                  <NumberRow label="SCOP (sezónny)" value={inputs.hpSCOP} step={0.1} decimals={1} onChange={(v)=>set({hpSCOP:v})} />
-                  <div className="mt-1 text-[12px] text-slate-300">Tip: podlahovka 35–40 °C ≈ 3.8–4.5, radiátory 50–55 °C ≈ 2.8–3.5</div>
-                  <div className="mt-2 border-t border-white/10 pt-2">
-                    <NumberRow
-  label={
-    <span>Podiel TČ z FVE (%)
-      <Tooltip text={`Akú časť ročnej spotreby tepelného čerpadla pokryje tvoja fotovoltika.
-Zvyšok ide zo siete za bežnú cenu elektriny.
-
-Výpočet efektívnej ceny el. pre TČ:
-c_eff = cena_sieť*(1 − podiel) + cena_FVE*podiel
-
-Príklad: podiel 30 %, cena_sieť 0,20 €/kWh, cena_FVE 0,00 €/kWh
-→ c_eff = 0,20*(1−0,30) + 0*0,30 = 0,14 €/kWh.
-
-Pozn.: podiel je ročný odhad (v lete vyšší, v zime nižší). S batériou alebo smart riadením môže byť podiel vyšší, bez batérie skôr 20–40 %.`} />
-    </span>
-  }
-  value={inputs.fveSharePct}
-  step={5}
-  decimals={0}
-  onChange={(v)=>set({ fveSharePct: v })}
- />
-
-                    <NumberRow 
-                      label={<span>Cena vlastnej FVE (€/kWh)
-                        <Tooltip text="Sem zadajte cenu elektriny z vlastnej fotovoltiky. 
-Ak ju beriete ako bezplatnú, ponechajte hodnotu 0. 
-Ak máte reálne náklady (splátky, servis), prepočítajte ich na €/kWh.
-Napr.: pri 10 kW FVE s investíciou cca 7000 € a ročnou výrobou ~10 000 kWh 
-→ počas 20 rokov prevádzky vychádza cena približne 0,035 €/kWh." />
-                      </span>} 
-                      value={inputs.fvePrice} 
-                      step={0.01} 
-                      decimals={3} 
-                      onChange={(v)=>set({fvePrice:v})} 
-                      hint="ak 0, tak zdarma" 
-                    />
-                    <div className="text-[12px] text-slate-300 flex items-center gap-1">
-                      Efektívna cena el. pre TČ: {fmtEur3(hpElecPrice)} /kWh
-                      <Tooltip text="Priemerná cena elektriny zohľadňujúca SCOP a podiel z FVE. Napr. COP 3 → ~0,072 €/kWh tepla, COP 4 → ~0,054 €/kWh tepla." />
-                    </div>
-                  </div>
-                </Card>
-
-                <Card title="Plynový kotol">
-                  <NumberRow label="Cena plynu (€/kWh paliva)" value={inputs.gasPricePerKWh} step={0.005} decimals={3} onChange={(v)=>set({gasPricePerKWh:v})} />
-                  <NumberRow label="Účinnosť kotla" value={inputs.effGas} step={0.01} decimals={2} onChange={(v)=>set({effGas:v})} hint="kondenzačný ~0.90–0.98" />
-                </Card>
-
-                <Card title="Kotol na pelety">
-                  <NumberRow label="Cena peliet (€/t)" value={inputs.pelletsPricePerTon} step={10} onChange={(v)=>set({pelletsPricePerTon:v})} />
-                  <NumberRow label="Výhrevnosť (kWh/t)" value={inputs.pelletsKWhPerTon} step={100} onChange={(v)=>set({pelletsKWhPerTon:v})} />
-                  <NumberRow label="Účinnosť kotla" value={inputs.effPellets} step={0.01} decimals={2} onChange={(v)=>set({effPellets:v})} />
-                </Card>
-
-                <Card title="Kotol na drevo">
-                  <NumberRow 
-                    label={<span>Výhrevnosť (kWh/prm) 
-                      <Tooltip text="Tvrdé drevo (buk, dub): ~1900 kWh/prm. Mäkké drevo (breza, jelša): ~1700 kWh/prm. Ihličnany (smrek, borovica): ~1500–1600 kWh/prm." />
-                    </span>} 
-                    value={inputs.woodKWhPerPrm} 
-                    step={50} 
-                    onChange={(v)=>set({woodKWhPerPrm:v})} 
-                  />
-                  <NumberRow label="Cena dreva (€/prm)" value={inputs.woodPricePerPrm} step={5} onChange={(v)=>set({woodPricePerPrm:v})} />
-                  <NumberRow label="Účinnosť kotla" value={inputs.effWood} step={0.01} decimals={2} onChange={(v)=>set({effWood:v})} />
-                </Card>
-              </div>
-
-              {/* VÝSLEDKY */}
-              <section className="mt-4">
-                <h2 className="text-lg font-semibold text-white mb-2">Výsledky – cena tepla a ročné náklady</h2>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {results.map((r)=>( 
-                    <div key={r.key} className={`rounded-xl border border-black/20 bg-[#444] text-white p-4 shadow-sm ${r.key===cheapestKey ? 'ring-2 ring-green-500' : ''}`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-bold text-base">{r.label}</h3>
-                        {r.key===cheapestKey && <span className="text-[11px] px-2 py-0.5 rounded-full bg-green-200 text-green-800">Najlacnejšie</span>}
-                      </div>
-                      <div className="text-xs text-slate-300 mb-2">{r.note}</div>
-                      <div className="text-xs text-slate-200">Cena tepla:</div>
-                      <div className="text-xl font-semibold">{fmtEur3(r.cpk)} <span className="text-[13px] font-normal text-slate-300">/ kWh</span></div>
-                      <div className="mt-2 text-xs text-slate-200">Ročné náklady (pri {inputs.heatDemand.toLocaleString('sk-SK')} kWh):</div>
-                      <div className="text-lg font-semibold">{fmtEur(r.annual)}</div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <footer className="mt-4 text-center text-xs text-slate-300">
-                © {new Date().getFullYear()} {company.name} • {company.prevadzka} • {company.phone} • {company.web}
-              </footer>
-            </div>
-          </div>
-        );
-      }
-
-      ReactDOM.createRoot(document.getElementById('app-root')).render(<HeatingCalculator />);
-    </script>
-  </body>
+  const out = `
+  <b>Výsledky – cena tepla a ročné náklady</b><br><br>
+  <b>Tepelné čerpadlo:</b> ${fmt(tcKwh,3)} €/kWh • ročné náklady <b>${fmt(tcCost)} €</b> (spotreba el.: ${fmt(tcEl)} kWh)<br>
+  <b>Plyn:</b> ${fmt(plynKwh,3)} €/kWh • ročné náklady <b>${fmt(plynCost)} €</b><br>
+  <b>Pelety:</b> ${fmt(pelKwhPrice,3)} €/kWh • ročné náklady <b>${fmt(pelCost)} €</b><br>
+  <b>Drevo:</b> ${fmt(drvKwhPrice,3)} €/kWh • ročné náklady <b>${fmt(drvCost)} €</b><br><br>
+  <small>Tip: percentá zadávaj ako celé čísla (napr. 80 = 80 %).</small>
+  `;
+  document.getElementById('out').innerHTML = out;
+});
+</script>
+</body>
 </html>
-
